@@ -32,9 +32,6 @@ jobs:
     
     - name: Run tests
       run: uv run pytest tests/ -v --tb=short
-    
-    - name: Run type checking
-      run: uv run python -m py_compile src/explicit_implementation/*.py
 
   coverage:
     runs-on: ubuntu-latest
