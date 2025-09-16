@@ -30,6 +30,21 @@ class IBaz(Interface):
         ...
 
 
+class IWithConcreteMethod(Interface):
+    @abstractmethod
+    def abstract_method(self) -> str:
+        ...
+    
+    def concrete_method(self) -> str:
+        """A normal concrete method that should be accessible directly."""
+        return "concrete method result"
+    
+    @classmethod
+    def class_method(cls) -> str:
+        """A class method that should be accessible directly."""
+        return "class method result"
+
+
 class TestInterfaceBasics:
     """Test basic interface functionality."""
     
@@ -314,6 +329,91 @@ class TestMultipleInheritance:
                 def foo_implementation(self, x: int) -> str:
                     return str(x)
                 # Missing IBar.bar implementation - should raise TypeError
+
+
+class TestConcreteMethodAccess:
+    """Test accessing concrete methods in interfaces directly from concrete classes."""
+    
+    def test_concrete_method_direct_access(self):
+        """Test that concrete methods in interfaces can be accessed directly without explicit implementation."""
+        
+        class Concrete(IWithConcreteMethod):
+            @implements(IWithConcreteMethod.abstract_method)
+            def abstract_method_impl(self) -> str:
+                return "abstract implementation"
+        
+        concrete = Concrete()
+        
+        # Access concrete method directly - should work without explicit implementation
+        result = concrete.concrete_method()
+        assert result == "concrete method result"
+        
+        # Access class method directly - should work without explicit implementation
+        class_result = concrete.class_method()
+        assert class_result == "class method result"
+        
+        # Also test accessing class method on the class itself
+        class_result_from_class = Concrete.class_method()
+        assert class_result_from_class == "class method result"
+        
+        # Verify that the abstract method works through interface casting
+        interface_impl = concrete.as_interface(IWithConcreteMethod)
+        abstract_result = interface_impl.abstract_method()
+        assert abstract_result == "abstract implementation"
+    
+    def test_concrete_method_inheritance_behavior(self):
+        """Test how concrete methods behave with inheritance and overriding."""
+        
+        class Concrete(IWithConcreteMethod):
+            @implements(IWithConcreteMethod.abstract_method)
+            def abstract_method_impl(self) -> str:
+                return "abstract implementation"
+            
+            def concrete_method(self) -> str:
+                """Override the concrete method in the concrete class."""
+                return "overridden concrete method"
+        
+        concrete = Concrete()
+        
+        # Direct access should use the overridden version
+        direct_result = concrete.concrete_method()
+        assert direct_result == "overridden concrete method"
+        
+        # Class method should still work the same way since it's not overridden
+        class_result = concrete.class_method()
+        assert class_result == "class method result"
+        
+        # Concrete methods should be accessible through interface casting
+        # Since there's no explicit implementation, it falls back to the concrete class's method
+        interface_impl = concrete.as_interface(IWithConcreteMethod)
+        interface_result = interface_impl.concrete_method()
+        assert interface_result == "overridden concrete method"  # Uses the concrete class's implementation
+        
+        # Class methods should also be accessible through interface casting
+        interface_class_result = interface_impl.class_method()
+        assert interface_class_result == "class method result"
+    
+    def test_concrete_method_without_override(self):
+        """Test concrete method access when not overridden in concrete class."""
+        
+        class SimpleImplementation(IWithConcreteMethod):
+            @implements(IWithConcreteMethod.abstract_method)
+            def abstract_method_impl(self) -> str:
+                return "simple abstract implementation"
+        
+        concrete = SimpleImplementation()
+        
+        # Direct access should use the interface's concrete method
+        direct_result = concrete.concrete_method()
+        assert direct_result == "concrete method result"
+        
+        # Interface casting should also work and return the same result
+        interface_impl = concrete.as_interface(IWithConcreteMethod)
+        interface_result = interface_impl.concrete_method()
+        assert interface_result == "concrete method result"
+        
+        # Both should be the same since there's no override
+        assert direct_result == interface_result
 
 
 class TestEdgeCases:

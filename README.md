@@ -9,6 +9,7 @@ A Python library that provides explicit interface implementations with compile-t
 ## Features
 
 - **Explicit Interface Declarations**: Define clear interface contracts using abstract methods
+- **Concrete Method Support**: Include concrete methods in interfaces with default implementations
 - **Flexible Implementation**: Allow partial implementations by default, enforce completeness with `concrete=True`
 - **Compile-time Safety**: Catch implementation errors at class definition time, not runtime
 - **Multiple Interface Support**: Implement multiple interfaces in a single class
@@ -107,6 +108,42 @@ repo = DatabaseRepository()
 repository_interface = repo.as_interface(IRepository)
 repository_interface.save({"name": "example"})
 repository_interface.load("123")
+```
+
+### Concrete Methods in Interfaces
+
+Interfaces can include concrete (non-abstract) methods that provide default implementations. These methods can be accessed directly from implementing classes without explicit implementation:
+
+```python
+class IService(Interface):
+    @abstractmethod
+    def process(self, data: str) -> str:
+        ...
+    
+    def log(self, message: str) -> None:
+        """Concrete method with default implementation."""
+        print(f"[LOG] {message}")
+    
+    @classmethod
+    def get_version(cls) -> str:
+        """Concrete class method."""
+        return "1.0.0"
+
+class MyService(IService):
+    @implements(IService.process)
+    def process_data(self, data: str) -> str:
+        return f"Processed: {data}"
+
+service = MyService()
+
+# Access concrete methods directly
+service.log("Starting process")          # Works directly
+service.get_version()                    # Works directly
+
+# Also accessible through interface casting
+interface = service.as_interface(IService)
+interface.log("Through interface")       # Also works
+interface.get_version()                  # Also works
 ```
 
 ### Concrete Classes
@@ -301,6 +338,12 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Changelog
+
+### 0.1.1
+- **Bug Fix**: Fixed access to concrete (non-abstract) methods when using `as_interface()`
+- Concrete methods in interfaces can now be properly accessed both directly and through interface casting
+- Added comprehensive test coverage for concrete method access patterns
+- Improved documentation with concrete method usage examples
 
 ### 0.1.0
 - Initial release

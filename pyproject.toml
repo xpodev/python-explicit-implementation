@@ -1,6 +1,6 @@
 [project]
 name = "explicit-implementation"
-version = "0.1.0"
+version = "0.1.1"
 description = "A Python library for explicit interface implementations with compile-time safety"
 readme = "README.md"
 authors = [

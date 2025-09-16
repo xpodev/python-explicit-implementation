@@ -1,6 +1,5 @@
 from abc import ABCMeta
-from sys import implementation
-from typing import Callable, Dict, Set, Type, TypeVar
+from typing import Callable, Dict, FrozenSet, Type, TypeVar, cast
 
 
 ImplementationMapping = Dict[Callable, Callable]
@@ -9,7 +8,7 @@ T = TypeVar('T', bound='Interface')
 
 class InterfaceMeta(ABCMeta):
     __explicit__implementations__: Dict[Type['Interface'], ImplementationMapping]
-    __explicit__specifications__: Set[Callable]
+    __explicit__specifications__: FrozenSet[Callable]
 
     def __new__(mcs, name, bases, namespace, *, concrete: bool = False):
         inherited_specifications = []
@@ -108,7 +107,7 @@ class InterfaceMeta(ABCMeta):
 
         return cls
     
-    def as_interface_type(cls, interface: Type[T]) -> T:
+    def as_interface_type(cls, interface: Type[T]) -> Callable[[T], T]:
         if not isinstance(interface, type) or not issubclass(interface, Interface):
             raise TypeError(f"Expected an interface type, got {interface}")
         
@@ -116,7 +115,7 @@ class InterfaceMeta(ABCMeta):
             raise TypeError(f"Class {cls.__name__} does not implement interface {interface.__name__}")
 
         if not interface.__explicit__specifications__:
-            return lambda instance: instance
+            return lambda instance: cast(T, instance)
             
         if interface not in cls.__explicit__implementations__:
             raise TypeError(f"Class {cls.__name__} does not implement interface {interface.__name__}")
@@ -133,14 +132,17 @@ class InterfaceMeta(ABCMeta):
                 except AttributeError as e:
                     raise e from None
                 
-                try:
-                    return implementation_mapping[specification].__get__(self._instance)
-                except KeyError:
-                    raise TypeError(f"Class {cls.__name__} does not provide an explicit implementation for method '{name}' of interface {interface.__name__}") from None
+                if hasattr(specification, "__declaring_interface__"):
+                    try:
+                        return implementation_mapping[specification].__get__(self._instance)
+                    except KeyError:
+                        raise TypeError(f"Class {cls.__name__} does not provide an explicit implementation for method '{name}' of interface {interface.__name__}") from None
+                
+                return getattr(self._instance, name)
 
-        return ExplicitImplementation
+        return cast(Callable[[T], T], ExplicitImplementation)
 
 
 class Interface(metaclass=InterfaceMeta):
     def as_interface(self, interface: Type[T]) -> T:
-        return type(self).as_interface_type(interface)(self)
+        return type(self).as_interface_type(interface)(cast(T, self))
